@@ -1,11 +1,666 @@
----
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elefante Runner - Juego Mejorado</title>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #ff7e5f, #feb47b);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+}
+.game-container {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 100%;
+}
+#gameCanvas {
+    border: 4px solid #333;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+    max-width: 100%;
+    height: auto;
+}
+.score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 20px;
+    border-radius: 20px;
+    z-index: 2;
+    display: none;
+}
+.instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 16px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 15px;
+    border-radius: 10px;
+    z-index: 2;
+    display: none;
+}
+.game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.85);
+    padding: 25px;
+    border-radius: 15px;
+    display: none;
+    text-align: center;
+    border: 3px solid #FF8C00;
+    z-index: 10;
+    box-shadow: 0 0 30px rgba(255, 140, 0, 0.5);
+    width: 80%;
+    max-width: 400px;
+}
+.game-over h2 {
+    color: #FF8C00;
+    font-size: 32px;
+    margin-top: 0;
+    text-shadow: 0 0 10px rgba(255, 140, 0, 0.7);
+}
+.game-over p {
+    color: white;
+    font-size: 20px;
+    margin: 15px 0;
+}
+button {
+    background: linear-gradient(to bottom, #FF8C00, #FF5500);
+    border: none;
+    color: white;
+    padding: 10px 25px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 30px;
+    margin-top: 12px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+}
+button:hover {
+    background: linear-gradient(to bottom, #FF9E20, #FF6600);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+button:active {
+    transform: translateY(1px);
+}
+.start-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 25px;
+    border-radius: 15px;
+    text-align: center;
+    border: 3px solid #FF8C00;
+    z-index: 5;
+    box-shadow: 0 0 30px rgba(255, 140, 0, 0.5);
+    width: 80%;
+    max-width: 400px;
+}
+.start-screen h1 {
+    color: #FF8C00;
+    font-size: 32px;
+    margin-top: 0;
+    text-shadow: 0 0 10px rgba(255, 140, 0, 0.7);
+}
+.start-screen p {
+    color: white;
+    font-size: 16px;
+    margin: 15px 0;
+    line-height: 1.4;
+}
+@media (max-width: 600px) {
+    .score {
+        font-size: 20px;
+        padding: 6px 15px;
+        top: 15px;
+        left: 15px;
+    }
+    .instructions {
+        font-size: 14px;
+        padding: 6px 12px;
+        bottom: 15px;
+    }
+    .game-over h2, .start-screen h1 {
+        font-size: 28px;
+    }
+    .game-over p, .start-screen p {
+        font-size: 16px;
+    }
+    button {
+        padding: 8px 20px;
+        font-size: 14px;
+    }
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+    <div class="score" id="scoreDisplay">Puntuación: <span id="score">0</span></div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div class="instructions" id="gameInstructions">
+        Presiona ESPACIO o haz clic para saltar. ¡Evita los cactus!
+    </div>
+    <div class="start-screen" id="startScreen">
+        <h1>Elefante Runner</h1>
+        <p>Ayuda al elefante a saltar sobre los cactus y sobrevivir el mayor tiempo posible.</p>
+        <p>Presiona ESPACIO o haz clic para comenzar</p>
+        <button id="startButton">Comenzar Juego</button>
+    </div>
+    <div class="game-over" id="gameOver">
+        <h2>¡Juego Terminado!</h2>
+        <p>Puntuación Final: <span id="finalScore">0</span></p>
+        <p>Presiona ESPACIO o haz clic para saltar. ¡Evita los cactus!</p>
+        <button id="restartButton">Jugar de Nuevo</button>
+    </div>
+</div>
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
----
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const gameOverElement = document.getElementById('gameOver');
+const finalScoreElement = document.getElementById('finalScore');
+const restartButton = document.getElementById('restartButton');
+const startScreen = document.getElementById('startScreen');
+const startButton = document.getElementById('startButton');
+const gameInstructions = document.getElementById('gameInstructions');
+ctx.imageSmoothingEnabled = false;
 
-<Layout>
-	<Welcome />
-</Layout>
+let gameRunning = false;
+let gameSpeed = 4;
+let score = 0;
+let animationFrame = 0;
+let obstacles = [];
+let obstacleTimer = 0;
+let clouds = [];
+let mountains = [];
+let stars = [];
+const ground = { y: 340, height: 60 };
+
+const elephant = {
+    x: 100,
+    y: 280,
+    width: 60,
+    height: 60,
+    velocityY: 0,
+    jumping: false,
+    grounded: true,
+    legFrame: 0,
+    trunkFrame: 0
+};
+
+// Inicializar montañas
+function initMountains() {
+    mountains = [];
+    for (let i = 0; i < 5; i++) {
+        mountains.push({
+            x: i * 200,
+            y: ground.y - 80 - Math.random() * 40,
+            width: 150 + Math.random() * 100,
+            height: 80 + Math.random() * 40,
+            speed: 0.5
+        });
+    }
+}
+
+// Inicializar estrellas
+function initStars() {
+    stars = [];
+    for (let i = 0; i < 100; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * 150,
+            size: Math.random() * 2,
+            opacity: Math.random() * 0.8 + 0.2
+        });
+    }
+}
+
+// Inicializar nubes
+function initClouds() {
+    clouds = [];
+    for (let i = 0; i < 8; i++) {
+        clouds.push({
+            x: Math.random() * canvas.width + canvas.width,
+            y: Math.random() * 80 + 40,
+            width: Math.random() * 80 + 60,
+            height: Math.random() * 30 + 20,
+            speed: 0.3 + Math.random() * 0.7
+        });
+    }
+}
+
+// Dibujar elefante mejorado
+function drawElephant() {
+    elephant.legFrame = Math.floor(animationFrame / 8) % 4;
+    elephant.trunkFrame = Math.sin(animationFrame / 5) * 3;
+    
+    // Sombra
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.beginPath();
+    ctx.ellipse(elephant.x + 30, ground.y + 5, 35, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Cuerpo
+    ctx.fillStyle = '#8B7D6B';
+    ctx.fillRect(elephant.x, elephant.y, 45, 35);
+    
+    // Cabeza
+    ctx.fillRect(elephant.x + 40, elephant.y - 10, 25, 30);
+    
+    // Oreja
+    ctx.fillStyle = '#A9A9A9';
+    ctx.beginPath();
+    ctx.moveTo(elephant.x + 45, elephant.y - 5);
+    ctx.lineTo(elephant.x + 65, elephant.y - 15);
+    ctx.lineTo(elephant.x + 60, elephant.y + 5);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Ojo
+    ctx.fillStyle = '#000';
+    ctx.fillRect(elephant.x + 55, elephant.y + 5, 3, 3);
+    
+    // Trompa
+    ctx.strokeStyle = '#8B7D6B';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(elephant.x + 65, elephant.y + 10);
+    ctx.lineTo(elephant.x + 75, elephant.y + 15 + elephant.trunkFrame);
+    ctx.stroke();
+    
+    // Pata delantera
+    ctx.fillStyle = '#708090';
+    ctx.fillRect(elephant.x + 5, elephant.y + 35, 8, 20);
+    
+    // Pata trasera
+    ctx.fillRect(elephant.x + 32, elephant.y + 35, 8, 20);
+    
+    // Animación de patas
+    const legPositions = [
+        [18, 35, 8, 20, 44, 35, 8, 20],
+        [18, 37, 8, 20, 44, 33, 8, 20],
+        [18, 35, 8, 20, 44, 37, 8, 20],
+        [18, 33, 8, 20, 44, 35, 8, 20]
+    ];
+    
+    for (let i = 0; i < 8; i += 4) {
+        ctx.fillRect(
+            elephant.x + legPositions[elephant.legFrame][i], 
+            elephant.y + legPositions[elephant.legFrame][i+1], 
+            legPositions[elephant.legFrame][i+2], 
+            legPositions[elephant.legFrame][i+3]
+        );
+    }
+    
+    // Cola
+    ctx.strokeStyle = '#8B7D6B';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(elephant.x - 2, elephant.y + 20);
+    ctx.lineTo(elephant.x - 8, elephant.y + 25);
+    ctx.stroke();
+}
+
+// Dibujar cactus mejorado
+function drawCactus(x, height) {
+    const y = ground.y - height;
+    const width = 30;
+    
+    // Sombra
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.beginPath();
+    ctx.ellipse(x + width/2, ground.y + 3, width/2 + 5, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Tallo principal
+    ctx.fillStyle = '#2E8B57';
+    ctx.fillRect(x + width/3, y, width/3, height);
+    
+    // Brazos superiores
+    ctx.fillRect(x, y + height/4, width/2, width/6);
+    ctx.fillRect(x + width/2, y + height/2, width/2, width/6);
+    
+    // Brazos inferiores
+    ctx.fillRect(x - width/4, y + height/2, width/3, width/6);
+    ctx.fillRect(x + width*0.75, y + height*0.75, width/3, width/6);
+    
+    // Espinas
+    ctx.fillStyle = '#228B22';
+    for (let i = 0; i < height; i += 8) {
+        ctx.fillRect(x + width/3 - 3, y + i, 2, 4);
+        ctx.fillRect(x + width/3 + width/3, y + i, 2, 4);
+    }
+    
+    // Detalles
+    ctx.fillStyle = '#3CB371';
+    ctx.fillRect(x + width/3 + 2, y + 5, width/3 - 4, height - 10);
+    
+    // Flores
+    if (Math.random() > 0.7) {
+        ctx.fillStyle = '#FF69B4';
+        ctx.beginPath();
+        ctx.arc(x + width/2, y + 10, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// Dibujar nube mejorada
+function drawCloud(cloud) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.beginPath();
+    ctx.arc(cloud.x, cloud.y, cloud.height/2, 0, Math.PI * 2);
+    ctx.arc(cloud.x + cloud.width/3, cloud.y - cloud.height/4, cloud.height/2.5, 0, Math.PI * 2);
+    ctx.arc(cloud.x + cloud.width/2, cloud.y, cloud.height/2, 0, Math.PI * 2);
+    ctx.arc(cloud.x + cloud.width/1.5, cloud.y - cloud.height/5, cloud.height/2.2, 0, Math.PI * 2);
+    ctx.arc(cloud.x + cloud.width, cloud.y, cloud.height/2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Dibujar montaña
+function drawMountain(mountain) {
+    ctx.fillStyle = '#5D4037';
+    ctx.beginPath();
+    ctx.moveTo(mountain.x, ground.y);
+    ctx.lineTo(mountain.x + mountain.width/2, mountain.y);
+    ctx.lineTo(mountain.x + mountain.width, ground.y);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Sombra
+    ctx.fillStyle = '#4E342E';
+    ctx.beginPath();
+    ctx.moveTo(mountain.x + mountain.width/2, mountain.y);
+    ctx.lineTo(mountain.x + mountain.width, ground.y);
+    ctx.lineTo(mountain.x + mountain.width, mountain.y + mountain.height);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Nieve
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(mountain.x + mountain.width/2 - 20, mountain.y + 10);
+    ctx.lineTo(mountain.x + mountain.width/2, mountain.y);
+    ctx.lineTo(mountain.x + mountain.width/2 + 20, mountain.y + 10);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Dibujar estrellas
+function drawStars() {
+    for (let star of stars) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// Dibujar suelo mejorado (sin pasto)
+function drawGround() {
+    // Suelo principal
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(0, ground.y, canvas.width, ground.height);
+    
+    // Detalles del suelo
+    ctx.fillStyle = '#A0522D';
+    for (let x = 0; x < canvas.width; x += 20) {
+        for (let y = ground.y; y < canvas.height; y += 15) {
+            if ((x + y) % 40 === 0) {
+                ctx.fillRect(x, y, 8, 4);
+            }
+        }
+    }
+}
+
+// Dibujar fondo (atardecer africano)
+function drawBackground() {
+    // Cielo de atardecer africano
+    const gradient = ctx.createLinearGradient(0, 0, 0, ground.y);
+    gradient.addColorStop(0, '#ff7e5f');
+    gradient.addColorStop(0.5, '#feb47b');
+    gradient.addColorStop(1, '#f8d7aa');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, ground.y);
+    
+    // Sol grande
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.8)';
+    ctx.beginPath();
+    ctx.arc(700, 80, 60, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Rayos del sol
+    ctx.strokeStyle = 'rgba(255, 165, 0, 0.3)';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 16; i++) {
+        const angle = (i * 22.5) * Math.PI / 180;
+        const x1 = 700 + Math.cos(angle) * 65;
+        const y1 = 80 + Math.sin(angle) * 65;
+        const x2 = 700 + Math.cos(angle) * 100;
+        const y2 = 80 + Math.sin(angle) * 100;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+    
+    // Estrellas (para efecto nocturno)
+    drawStars();
+    
+    // Montañas
+    for (let mountain of mountains) {
+        drawMountain(mountain);
+    }
+}
+
+// Salto del elefante
+function jump() {
+    if (elephant.grounded) {
+        elephant.velocityY = -14 - Math.random()*2;
+        elephant.jumping = true;
+        elephant.grounded = false;
+    }
+}
+
+// Actualizar posición del elefante
+function updateElephant() {
+    if (elephant.jumping) {
+        elephant.y += elephant.velocityY;
+        elephant.velocityY += 0.7;
+        if (elephant.y >= 280) {
+            elephant.y = 280;
+            elephant.jumping = false;
+            elephant.grounded = true;
+            elephant.velocityY = 0;
+        }
+    }
+}
+
+// Crear obstáculos
+function createObstacle() {
+    if (obstacleTimer <= 0) {
+        let size = Math.random() > 0.6 ? 50 : 30;
+        obstacles.push({ x: canvas.width, height: size });
+        obstacleTimer = Math.random() * 80 + 80;
+    }
+    obstacleTimer--;
+}
+
+// Actualizar obstáculos
+function updateObstacles() {
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= gameSpeed;
+        if (obstacles[i].x + 30 < 0) {
+            obstacles.splice(i, 1);
+            score += 10;
+        }
+    }
+}
+
+// Actualizar nubes
+function updateClouds() {
+    for (let cloud of clouds) {
+        cloud.x -= cloud.speed;
+        if (cloud.x + cloud.width < 0) {
+            cloud.x = canvas.width + Math.random() * 100;
+            cloud.y = Math.random() * 80 + 40;
+        }
+    }
+}
+
+// Actualizar montañas
+function updateMountains() {
+    for (let mountain of mountains) {
+        mountain.x -= mountain.speed;
+        if (mountain.x + mountain.width < 0) {
+            mountain.x = canvas.width;
+            mountain.y = ground.y - 80 - Math.random() * 40;
+        }
+    }
+}
+
+// Verificar colisiones
+function checkCollisions() {
+    for (let obstacle of obstacles) {
+        const y = ground.y - obstacle.height;
+        if (elephant.x < obstacle.x + 30 &&
+            elephant.x + elephant.width > obstacle.x &&
+            elephant.y < y + obstacle.height &&
+            elephant.y + elephant.height > y) {
+            gameOver();
+        }
+    }
+}
+
+// Fin del juego
+function gameOver() {
+    gameRunning = false;
+    finalScoreElement.textContent = score;
+    gameOverElement.style.display = 'block';
+    gameInstructions.style.display = 'block';
+}
+
+// Reiniciar juego
+function restartGame() {
+    gameRunning = true;
+    score = 0;
+    gameSpeed = 4;
+    obstacles = [];
+    obstacleTimer = 0;
+    elephant.y = 280;
+    elephant.velocityY = 0;
+    elephant.jumping = false;
+    elephant.grounded = true;
+    gameOverElement.style.display = 'none';
+    startScreen.style.display = 'none';
+    scoreDisplay.style.display = 'block';
+    gameInstructions.style.display = 'none';
+    initClouds();
+    initMountains();
+    requestAnimationFrame(gameLoop);
+}
+
+// Bucle principal del juego
+function gameLoop() {
+    if (!gameRunning) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Aumentar velocidad gradualmente (solo durante el juego)
+    if (score > 0 && score % 100 === 0) gameSpeed += 0.05;
+    
+    // Actualizar elementos
+    updateElephant();
+    createObstacle();
+    updateObstacles();
+    updateClouds();
+    updateMountains();
+    checkCollisions();
+    
+    // Dibujar elementos
+    drawBackground();
+    for (let cloud of clouds) drawCloud(cloud);
+    drawGround();
+    drawElephant();
+    for (let obstacle of obstacles) drawCactus(obstacle.x, obstacle.height);
+    
+    // Actualizar puntuación
+    scoreElement.textContent = score;
+    score++;
+    animationFrame++;
+    
+    requestAnimationFrame(gameLoop);
+}
+
+// Eventos
+document.addEventListener('keydown', e => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (gameRunning) {
+            jump();
+        } else if (startScreen.style.display !== 'none') {
+            restartGame();
+        } else {
+            restartGame();
+        }
+    }
+});
+
+canvas.addEventListener('click', () => {
+    if (gameRunning) {
+        jump();
+    } else if (startScreen.style.display !== 'none') {
+        restartGame();
+    } else {
+        restartGame();
+    }
+});
+
+restartButton.addEventListener('click', restartGame);
+startButton.addEventListener('click', restartGame);
+
+// Inicialización
+initStars();
+initClouds();
+initMountains();
+drawBackground();
+for (let cloud of clouds) drawCloud(cloud);
+drawGround();
+drawElephant();
+</script>
+</body>
+</html>
