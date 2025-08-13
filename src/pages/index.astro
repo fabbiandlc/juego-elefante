@@ -198,6 +198,7 @@ const restartButton = document.getElementById('restartButton');
 const startScreen = document.getElementById('startScreen');
 const startButton = document.getElementById('startButton');
 const gameInstructions = document.getElementById('gameInstructions');
+const gameContainer = document.querySelector('.game-container');
 ctx.imageSmoothingEnabled = false;
 
 let gameRunning = false;
@@ -640,13 +641,17 @@ document.addEventListener('keydown', e => {
     }
 });
 
-canvas.addEventListener('click', () => {
-    if (gameRunning) {
-        jump();
-    } else if (startScreen.style.display !== 'none') {
-        restartGame();
-    } else {
-        restartGame();
+// Evento de clic en toda la pantalla
+document.addEventListener('click', (e) => {
+    // Verificar si no se hizo clic en botones para evitar conflictos
+    if (e.target.tagName !== 'BUTTON') {
+        if (gameRunning) {
+            jump();
+        } else if (startScreen.style.display !== 'none') {
+            restartGame();
+        } else {
+            restartGame();
+        }
     }
 });
 
